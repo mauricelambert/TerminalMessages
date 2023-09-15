@@ -1,13 +1,9 @@
-#![feature(once_cell)]
-
-#[macro_use]
-extern crate lazy_static;
-
 use std::{sync::Mutex, collections::HashMap};
-use lazy_static::lazy::Lazy;
+use lazy_static::lazy_static;
 use std::io::{stdout, Write};
 
 /// Preconfigured ANSI colors constants
+#[derive(Clone)]
 enum Color {
     Black,  // 0
     Red,    // 1
@@ -73,6 +69,7 @@ pub trait _State {
 }
 
 /// Status type to add your custom colors
+#[derive(Clone)]
 pub struct RGBState {
     name: String,
     color: (u8, u8, u8),
@@ -94,11 +91,12 @@ impl _State for RGBState {
     }
 
     fn print(&self) {
-        println!("{}", self.as_string(self.name));
+        println!("{}", self.as_string(self.name.clone()));
     }
 }
 
 /// Default state type using preconfigured ANSI colors
+#[derive(Clone)]
 pub struct State {
     name: String,
     color: Color,
@@ -116,105 +114,115 @@ impl _State for State {
     }
 
     fn print(&self) {
-        println!("{}", self.as_string(self.name));
+        println!("{}", self.as_string(self.name.clone()));
     }
 }
 
 /// States used to print formatted and colored messages
 /// States must be mutable to add your own custom states
 lazy_static! {
-    static ref StateOK: Mutex<State> = {
-        let mut state = State{
+    static ref STATE_OK: State = {
+        State {
             name: String::from("OK"),
             color: Color::Green,
-            character: "+".to_string()
-        };
-        Mutex::new(state)
+            character: "+".to_string(),
+        }
+    };
+    static ref STATE_NOK: State = {
+        State {
+            name: String::from("NOK"),
+            color: Color::Yellow,
+            character: "-".to_string(),
+        }
+    };
+    static ref STATE_ERROR: State = {
+        State {
+            name: String::from("ERROR"),
+            color: Color::Red,
+            character: "!".to_string(),
+        }
+    };
+    static ref STATE_INFO: State = {
+        State {
+            name: String::from("INFO"),
+            color: Color::Blue,
+            character: "*".to_string(),
+        }
+    };
+    static ref STATE_TODO: State = {
+        State {
+            name: String::from("TODO"),
+            color: Color::Purple,
+            character: "#".to_string(),
+        }
+    };
+    static ref STATE_ASK: State = {
+        State {
+            name: String::from("ASK"),
+            color: Color::Cyan,
+            character: "?".to_string(),
+        }
     };
 
-    // doesn't have a size known at compile-time
-    // cannot be sent between threads safely
-    static ref STATES: Mutex<HashMap<&'static str, &'static Lazy<Mutex<dyn _State + 'static>>>> = {
-        let mut _states = HashMap::from(
+    static ref STATES: Mutex<HashMap<&'static str, Box<dyn _State + Send>>> = {
+        let _states: HashMap<&'static str, Box<dyn _State + Send>> = HashMap::from(
             [
                 (
                     "OK",
-                    Lazy::new(StateOK)
-                    /*State{
-                        name: String::from("OK"),
-                        color: Color::Green,
-                        character: "+".to_string(),
-                    }*/
+                    Box::new(STATE_OK.clone()) as Box<dyn _State + Send>
                 ),
                 (
                     "NOK",
-                    State{
-                        name: String::from("NOK"),
-                        color: Color::Yellow,
-                        character: "-".to_string(),
-                    }
+                    Box::new(STATE_NOK.clone()) as Box<dyn _State + Send>
                 ),
                 (
                     "ERROR",
-                    State{
-                        name: String::from("ERROR"),
-                        color: Color::Red,
-                        character: "!".to_string(),
-                    }
+                    Box::new(STATE_ERROR.clone()) as Box<dyn _State + Send>
                 ),
                 (
                     "INFO",
-                    State{
-                        name: String::from("INFO"),
-                        color: Color::Blue,
-                        character: "*".to_string(),
-                    }
+                    Box::new(STATE_INFO.clone()) as Box<dyn _State + Send>
                 ),
                 (
                     "TODO",
-                    State{
-                        name: String::from("TODO"),
-                        color: Color::Purple,
-                        character: "#".to_string(),
-                    }
+                    Box::new(STATE_TODO.clone()) as Box<dyn _State + Send>
                 ),
                 (
                     "ASK",
-                    State{
-                        name: String::from("ASK"),
-                        color: Color::Cyan,
-                        character: "?".to_string(),
-                    }
+                    Box::new(STATE_ASK.clone()) as Box<dyn _State + Send>
                 ),
             ]
         );
         Mutex::new(_states)
     };
+
+    /// The default state
+    ///
+    /// # Example
+    ///
+    /// [ ] My default message (white)
+    static ref DEFAULT_STATE: Mutex<Box<dyn _State + Send>> = {
+        let _default: Box<dyn _State + Send> = Box::new(State {
+            name: String::from("default"),
+            color: Color::White,
+            character: String::from(" "),
+        });
+        Mutex::new(_default)
+    };
+
+    /// The default progress bar
+    ///
+    /// # Example
+    ///
+    /// |██████████          | (50%)
+    static ref DEFAULT_PROGRESSBAR: ProgressBar = ProgressBar {
+        start: String::from("|"),
+        end: String::from("|"),
+        character: String::from("\u{2588}"),
+        empty: String::from(" "),
+        size: 20,
+    };
 }
-
-/// The default state
-///
-/// # Example
-///
-/// [ ] My default message (white)
-const default_state: State = State {
-    name: String::from("default"),
-    color: Color::White,
-    character: String::from(" "),
-};
-
-/// The default progress bar
-///
-/// # Example
-///
-/// |██████████          | (50%)
-const default_progressbar: ProgressBar = ProgressBar {
-    start: String::from("|"),
-    end: String::from("|"),
-    character: String::from("\u{2588}"),
-    empty: String::from(" "),
-    size: 20,
-};
 
 /// Add a new state with a predefined color.
 ///
@@ -229,11 +237,11 @@ const default_progressbar: ProgressBar = ProgressBar {
 /// ```rust
 /// add_state("Test", "T", "cyan");
 /// ```
-pub fn add_state (key: &str, character: &str, color: &str) {
+pub fn add_state (key: &'static str, character: &str, color: &str) {
     let mut _states = STATES.lock().unwrap();
     _states.insert(
         key,
-        State {
+        Box::new(State {
             name: String::from(key),
             color: match color {
                 "black"  => Color::Black,
@@ -247,7 +255,7 @@ pub fn add_state (key: &str, character: &str, color: &str) {
                 _        => Color::White,
             },
             character: String::from(character),
-        }
+        }) as Box<dyn _State + Send>
     );
 }
 
@@ -266,15 +274,15 @@ pub fn add_state (key: &str, character: &str, color: &str) {
 /// ```rust
 /// add_rgb_state("Test", "T", 50, 200, 200);
 /// ```
-pub fn add_rgb_state (key: &str, string: &str, red: u8, green: u8, blue: u8) {
+pub fn add_rgb_state (key: &'static str, string: &str, red: u8, green: u8, blue: u8) {
     let mut _states = STATES.lock().unwrap();
     _states.insert(
         key,
-        RGBState {
+        Box::new(RGBState {
             name: String::from(key),
             color: (red, green, blue),
             character: String::from(string),
-        }
+        }) as Box<dyn _State + Send>
     );
 }
 
@@ -294,41 +302,40 @@ pub fn add_rgb_state (key: &str, string: &str, red: u8, green: u8, blue: u8) {
 /// # Examples
 ///
 /// ```rust
-/// printf("It's working !");
-/// printf("Is not working...", "NOK", 25, " - ", "\n\n", ProgressBar{"[", "]", "#", "-", 30}, true, true);
+/// messagef("It's working !");
+/// messagef("Is not working...", "NOK", 25, " - ", "\n\n", ProgressBar{"[", "]", "#", "-", 30}, true, true);
 /// ```
 pub fn messagef (text: &str, state: Option<&str>, pourcent: Option<u8>, start: Option<&str>, end: Option<&str>, progressbar: Option<&ProgressBar>, add_progressbar: Option<bool>, oneline_progress: Option<bool>) {
     let to_print: String;
     
     let mut _states = STATES.lock().unwrap();
-    let state = _states.get(state.unwrap_or("OK")).unwrap_or(default_state);
+    let default_state = &DEFAULT_STATE.lock().unwrap();
+    let state = _states.get(&*state.unwrap_or("OK").to_string()).unwrap_or(default_state);
     let start = start.unwrap_or("");
     let end = end.unwrap_or("\n");
-    let progressbar = progressbar.unwrap_or(&default_progressbar);
+    let progressbar = progressbar.unwrap_or(&DEFAULT_PROGRESSBAR);
     
     let has_pourcent = pourcent.is_some();
     let oneline_progress = oneline_progress.is_some() && oneline_progress.unwrap();
     let add_progressbar = add_progressbar.is_none() || add_progressbar.unwrap();
 
-    let progress_bar: String;
+    let mut progress_bar: String = String::new();
 
     if has_pourcent && add_progressbar {
         let pourcent = pourcent.unwrap();
         let temp_progressbar = format!(" {}% {}\x1b[0m{}\x1b[F", pourcent, progressbar.progress(progressbar.get_progress_size(pourcent.into())), end);
 
         if oneline_progress {
-            String::from(String::from(temp_progressbar));
+            progress_bar = String::from(String::from(temp_progressbar));
         } else {
             progress_bar = String::from(state.as_string(temp_progressbar));
         }
-    } else {
-        progress_bar = String::new();
     }
 
     if oneline_progress {
-        to_print = String::from("\x1b[K".to_owned() + start + state.as_string(text) + progress_bar)
+        to_print = String::from("\x1b[K".to_owned() + start + &state.as_string(text.to_string()) + &progress_bar)
     } else {
-        to_print = String::from("\x1b[K".to_owned() + start + state.as_string(text) + end + progress_bar)
+        to_print = String::from("\x1b[K".to_owned() + start + &state.as_string(text.to_string()) + end + &progress_bar)
     }
 
     print!("{}", to_print);
@@ -343,7 +350,7 @@ pub fn messagef (text: &str, state: Option<&str>, pourcent: Option<u8>, start: O
 /// print_all_state();
 /// ```
 pub fn print_all_state () {
-    default_state.print();
+    DEFAULT_STATE.lock().unwrap().print();
 
     let mut _states = STATES.lock().unwrap();
 
