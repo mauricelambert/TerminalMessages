@@ -3,7 +3,12 @@ name = "TerminalMessages"
 version = "0.0.1"
 edition = "2021"
 
+[lib]
+name = "TerminalMessage"
+crate-type = ["dylib"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 lazy_static = "1.4.0"
+libc = "0.2.80"

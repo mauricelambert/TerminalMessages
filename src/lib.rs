@@ -1,6 +1,9 @@
+
+
 use std::{sync::Mutex, collections::HashMap};
 use lazy_static::lazy_static;
 use std::io::{stdout, Write};
+extern crate libc;
 
 /// Preconfigured ANSI colors constants
 #[derive(Clone)]
@@ -30,17 +33,27 @@ impl Color {
     }
 }
 
+/// The progress bar type to create your own custom progress bars from C types
+#[repr(C)]
+pub struct ProgressBarC {
+    pub start: *const u8,
+    pub end: *const u8,
+    pub character: *const u8,
+    pub empty: *const u8,
+    pub size: u16,
+}
+
 /// The progress bar type to create your own custom progress bars
 pub struct ProgressBar {
-    start: String,
-    end: String,
-    character: String,
-    empty: String,
-    size: i16,
+    pub start: String,
+    pub end: String,
+    pub character: String,
+    pub empty: String,
+    pub size: u16,
 }
 
 impl ProgressBar {
-    fn progress(&self, progress_size: i16) -> String {
+    fn progress(&self, progress_size: u16) -> String {
         format!(
             "{start}{characters}{emptys}{end}",
             start=self.start,
@@ -50,8 +63,8 @@ impl ProgressBar {
         )
     }
 
-    fn get_progress_size(&self, pourcent: i16) -> i16 {
-        let progress_size = (pourcent as f32 / (100.0 / self.size as f32)).round() as i16;
+    fn get_progress_size(&self, pourcent: u16) -> u16 {
+        let progress_size = (pourcent as f32 / (100.0 / self.size as f32)).round() as u16;
 
         if progress_size > self.size {
             self.size
@@ -224,6 +237,27 @@ lazy_static! {
     };
 }
 
+/// Convert *char (C) to &str (Rust) to get a Rust type from DLL/SO.
+///
+/// # Parameters
+///
+/// - `string_c`          (*const u8):                 C string to convert
+///
+/// # Return value
+///
+/// - &str                (&str)                       Rust string converted from C string
+///
+/// # Examples
+///
+/// ```rust
+/// rust_from_c_string(b"Hello, world!\0".as_ptr());
+/// ```
+fn rust_from_c_string (string_c: *const u8) -> &'static str {
+    let length = unsafe { libc::strlen(string_c as *const libc::c_char) };
+    let slice = unsafe { std::slice::from_raw_parts(string_c, length) };
+    std::str::from_utf8(slice).unwrap()
+}
+
 /// Add a new state with a predefined color.
 ///
 /// # Parameters
@@ -235,9 +269,13 @@ lazy_static! {
 /// # Examples
 ///
 /// ```rust
-/// add_state("Test", "T", "cyan");
+/// add_state(b"Test\0".as_ptr(), b"T\0".as_ptr(), b"cyan\0".as_ptr());
 /// ```
-pub fn add_state (key: &'static str, character: &str, color: &str) {
+pub extern "C" fn add_state (key_: *const u8, character_: *const u8, color_: *const u8) {
+    let key = rust_from_c_string(key_);
+    let color = rust_from_c_string(color_);
+    let character = rust_from_c_string(character_);
+
     let mut _states = STATES.lock().unwrap();
     _states.insert(
         key,
@@ -272,9 +310,12 @@ pub fn add_state (key: &'static str, character: &str, color: &str) {
 /// # Examples
 ///
 /// ```rust
-/// add_rgb_state("Test", "T", 50, 200, 200);
+/// add_rgb_state(b"Test\0".as_ptr(), b"T\0".as_ptr(), 50, 200, 200);
 /// ```
-pub fn add_rgb_state (key: &'static str, string: &str, red: u8, green: u8, blue: u8) {
+pub extern "C" fn add_rgb_state (key_: *const u8, string_: *const u8, red: u8, green: u8, blue: u8) {
+    let key = rust_from_c_string(key_);
+    let string = rust_from_c_string(string_);
+
     let mut _states = STATES.lock().unwrap();
     _states.insert(
         key,
@@ -284,6 +325,85 @@ pub fn add_rgb_state (key: &'static str, string: &str, red: u8, green: u8, blue:
             character: String::from(string),
         }) as Box<dyn _State + Send>
     );
+}
+
+/// This function is an interface for _messagef Rust function to use it from native DLL/SO
+///
+/// # Parameters
+///
+/// - `text`             (*const u8):                        Message to print
+/// - `state`            (*const u8 or NULL):                State name used to print the message
+/// - `pourcent`         (int - u8):                         Number between 0 and 100 that represents progress
+/// - `start`            (*const u8 or NULL):                Characters to print before color and formatting
+/// - `end`              (*const u8 or NULL):                Characters to print after color and formatting
+/// - `progressbar`      (ProgressBarC):                     A ProgressBarC object to customize the progress bar
+/// - `add_progressbar`  (u8):                               If not 0 and pourcent is defined: add the progress bar in output
+/// - `oneline_progress` (u8):                               If not 0: print one line message and progression
+///
+/// # Examples
+///
+/// ```rust
+/// _messagef(b"It's working !\0".as_ptr());
+/// _messagef(b"Is not working...\0".as_ptr(), b"NOK\0".as_ptr(), 25, b" - \0".as_ptr(), b"\n\n\0".as_ptr(), ProgressBarC{b"[\0".as_ptr(), b"]\0".as_ptr(), b"#\0".as_ptr(), b"-\0".as_ptr(), 30}, 1, 1);
+/// ```
+pub extern "C" fn messagef (text_: *const u8, state_: *const u8, pourcent_: u8, start_: *const u8, end_: *const u8, progressbar_: *const ProgressBarC, add_progressbar_: u8, oneline_progress_: u8) {
+    let text = rust_from_c_string(text_);
+    let end: Option<&str>;
+    let state: Option<&str>;
+    let start: Option<&str>;
+    let pourcent = Some(pourcent_);
+    let add_progressbar: Option<bool>;
+    let oneline_progress: Option<bool>;
+    let progressbar: Option<&ProgressBar>;
+
+    if end_.is_null() {
+        end = None;
+    } else {
+        end = Some(rust_from_c_string(end_));
+    }
+
+    if state_.is_null() {
+        state = None;
+    } else {
+        state = Some(rust_from_c_string(state_));
+    }
+
+    if start_.is_null() {
+        start = None;
+    } else {
+        start = Some(rust_from_c_string(start_));
+    }
+
+    if add_progressbar_ == 0 {
+        add_progressbar = None;
+    } else {
+        add_progressbar = Some(true);
+    }
+
+    if oneline_progress_ == 0 {
+        oneline_progress = None;
+    } else {
+        oneline_progress = Some(true);
+    }
+
+    let mut _progressbar = ProgressBar{start: String::from(""), end: String::from(""), character: String::from(""), empty: String::from(""), size: 0};
+    let progressbar__: &ProgressBarC;
+
+    if progressbar_.is_null() {
+        progressbar = None;
+    } else {
+        progressbar__ = unsafe { &(*progressbar_) };
+
+        _progressbar.character = String::from(rust_from_c_string(progressbar__.character));
+        _progressbar.empty = String::from(rust_from_c_string(progressbar__.empty));
+        _progressbar.start = String::from(rust_from_c_string(progressbar__.start));
+        _progressbar.end = String::from(rust_from_c_string(progressbar__.end));
+        _progressbar.size = progressbar__.size;
+
+        progressbar = Some(&_progressbar);
+    }
+
+    _messagef(text, state, pourcent, start, end, progressbar, add_progressbar, oneline_progress)
 }
 
 /// Print a message formatted and colored using ANSI characters.
@@ -302,10 +422,10 @@ pub fn add_rgb_state (key: &'static str, string: &str, red: u8, green: u8, blue:
 /// # Examples
 ///
 /// ```rust
-/// messagef("It's working !");
-/// messagef("Is not working...", "NOK", 25, " - ", "\n\n", ProgressBar{"[", "]", "#", "-", 30}, true, true);
+/// _messagef("It's working !");
+/// _messagef("Is not working...", "NOK", 25, " - ", "\n\n", ProgressBar{"[", "]", "#", "-", 30}, true, true);
 /// ```
-pub fn messagef (text: &str, state: Option<&str>, pourcent: Option<u8>, start: Option<&str>, end: Option<&str>, progressbar: Option<&ProgressBar>, add_progressbar: Option<bool>, oneline_progress: Option<bool>) {
+pub fn _messagef (text: &str, state: Option<&str>, pourcent: Option<u8>, start: Option<&str>, end: Option<&str>, progressbar: Option<&ProgressBar>, add_progressbar: Option<bool>, oneline_progress: Option<bool>) {
     let to_print: String;
     
     let mut _states = STATES.lock().unwrap();
@@ -349,7 +469,7 @@ pub fn messagef (text: &str, state: Option<&str>, pourcent: Option<u8>, start: O
 /// ```rust
 /// print_all_state();
 /// ```
-pub fn print_all_state () {
+pub extern "C" fn print_all_state () {
     DEFAULT_STATE.lock().unwrap().print();
 
     let mut _states = STATES.lock().unwrap();
@@ -357,19 +477,4 @@ pub fn print_all_state () {
     for state in _states.values() {
         state.print();
     }
-}
-
-/// Main function to test the library
-fn main () {
-    print_all_state();
-    add_rgb_state("Test1", "T", 50, 200, 200);
-    add_state("Test2", "T", "cyan");
-    print_all_state();
-
-    messagef("It's working !", None, None, None, None, None, None, None);
-    messagef("Is not working...", Some("NOK"), Some(25), Some(" - "), Some("\n\n"), Some(&ProgressBar{start: String::from("["), end: String::from("]"), character: String::from("#"), empty: String::from("-"), size: 30}), Some(true), Some(true));
-
-    messagef("Test1", Some("Test1"), Some(50), Some(""), Some("\n"), Some(&ProgressBar{start: String::from("|"), end: String::from("|"), character: String::from("\u{2588}"), empty: String::from(" "), size: 30}), Some(false), Some(false));
-    print!("{}", "\n");
-    messagef("Test2", Some("Test2"), Some(50), Some(""), Some("\n\n"), Some(&ProgressBar{start: String::from("|"), end: String::from("|"), character: String::from("\u{2588}"), empty: String::from(" "), size: 30}), Some(false), Some(true));
 }

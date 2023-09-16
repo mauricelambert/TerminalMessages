@@ -1,5 +1,7 @@
 # TerminalMessages
 
+**This package does not work yet !**
+
 ## Description
 
 This package is a DLL written in Rust with *interface* for other languages like Python, Ruby, Perl, Go... This library implements formatted and colored messages to be written in the console. It should be used when running a procedure, script, or analysis to show statuses, errors, prompt for input, or explain what the user should do, etc...
