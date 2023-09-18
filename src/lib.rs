@@ -1,9 +1,23 @@
+//    This file implements a generic CLI for process and procedure
+//    Copyright (C) 2023  TerminalMessages
+
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
 use std::{sync::Mutex, collections::HashMap};
 use lazy_static::lazy_static;
 use std::io::{stdout, Write};
-extern crate libc;
 
 /// Preconfigured ANSI colors constants
 #[derive(Clone)]
@@ -94,7 +108,7 @@ impl _State for RGBState {
         let (red, green, blue) = self.color;
 
         format!(
-            "\x1b[38;{red};{green};{blue}m[{string}] {text}\x1b[0m",
+            "\x1b[38;2;{red};{green};{blue}m[{string}] {text}",
             red=red,
             green=green,
             blue=blue,
@@ -119,7 +133,7 @@ pub struct State {
 impl _State for State {
     fn as_string(&self, text: String) -> String {
         format!(
-            "\x1b[3{color}m[{character}] {text}\x1b[0m",
+            "\x1b[3{color}m[{character}] {text}",
             color=self.color.value(),
             character=self.character,
             text=text,
@@ -253,9 +267,36 @@ lazy_static! {
 /// rust_from_c_string(b"Hello, world!\0".as_ptr());
 /// ```
 fn rust_from_c_string (string_c: *const u8) -> &'static str {
-    let length = unsafe { libc::strlen(string_c as *const libc::c_char) };
+    let length = strlen(string_c);
     let slice = unsafe { std::slice::from_raw_parts(string_c, length) };
     std::str::from_utf8(slice).unwrap()
+}
+
+/// This function return the C string length.
+///
+/// # Parameters
+///
+/// - `string_c`          (*const u8):                 C string
+///
+/// # Return value
+///
+/// - size                (usize)                      String length
+///
+/// # Examples
+///
+/// ```rust
+/// strlen(b"Hello, world!\0".as_ptr());
+/// ```
+fn strlen(string_c: *const u8) -> usize {
+    let mut length = 0;
+
+    unsafe {
+        while *string_c.add(length) != 0 {
+            length += 1;
+        }
+    }
+
+    length
 }
 
 /// Add a new state with a predefined color.
@@ -271,6 +312,7 @@ fn rust_from_c_string (string_c: *const u8) -> &'static str {
 /// ```rust
 /// add_state(b"Test\0".as_ptr(), b"T\0".as_ptr(), b"cyan\0".as_ptr());
 /// ```
+#[no_mangle]
 pub extern "C" fn add_state (key_: *const u8, character_: *const u8, color_: *const u8) {
     let key = rust_from_c_string(key_);
     let color = rust_from_c_string(color_);
@@ -312,6 +354,7 @@ pub extern "C" fn add_state (key_: *const u8, character_: *const u8, color_: *co
 /// ```rust
 /// add_rgb_state(b"Test\0".as_ptr(), b"T\0".as_ptr(), 50, 200, 200);
 /// ```
+#[no_mangle]
 pub extern "C" fn add_rgb_state (key_: *const u8, string_: *const u8, red: u8, green: u8, blue: u8) {
     let key = rust_from_c_string(key_);
     let string = rust_from_c_string(string_);
@@ -346,6 +389,7 @@ pub extern "C" fn add_rgb_state (key_: *const u8, string_: *const u8, red: u8, g
 /// _messagef(b"It's working !\0".as_ptr());
 /// _messagef(b"Is not working...\0".as_ptr(), b"NOK\0".as_ptr(), 25, b" - \0".as_ptr(), b"\n\n\0".as_ptr(), ProgressBarC{b"[\0".as_ptr(), b"]\0".as_ptr(), b"#\0".as_ptr(), b"-\0".as_ptr(), 30}, 1, 1);
 /// ```
+#[no_mangle]
 pub extern "C" fn messagef (text_: *const u8, state_: *const u8, pourcent_: u8, start_: *const u8, end_: *const u8, progressbar_: *const ProgressBarC, add_progressbar_: u8, oneline_progress_: u8) {
     let text = rust_from_c_string(text_);
     let end: Option<&str>;
@@ -428,7 +472,7 @@ pub extern "C" fn messagef (text_: *const u8, state_: *const u8, pourcent_: u8, 
 pub fn _messagef (text: &str, state: Option<&str>, pourcent: Option<u8>, start: Option<&str>, end: Option<&str>, progressbar: Option<&ProgressBar>, add_progressbar: Option<bool>, oneline_progress: Option<bool>) {
     let to_print: String;
     
-    let mut _states = STATES.lock().unwrap();
+    let _states = STATES.lock().unwrap();
     let default_state = &DEFAULT_STATE.lock().unwrap();
     let state = _states.get(&*state.unwrap_or("OK").to_string()).unwrap_or(default_state);
     let start = start.unwrap_or("");
@@ -455,7 +499,7 @@ pub fn _messagef (text: &str, state: Option<&str>, pourcent: Option<u8>, start: 
     if oneline_progress {
         to_print = String::from("\x1b[K".to_owned() + start + &state.as_string(text.to_string()) + &progress_bar)
     } else {
-        to_print = String::from("\x1b[K".to_owned() + start + &state.as_string(text.to_string()) + end + &progress_bar)
+        to_print = String::from("\x1b[K".to_owned() + start + &state.as_string(text.to_string()) + "\n" + &progress_bar)
     }
 
     print!("{}", to_print);
@@ -469,10 +513,11 @@ pub fn _messagef (text: &str, state: Option<&str>, pourcent: Option<u8>, start: 
 /// ```rust
 /// print_all_state();
 /// ```
+#[no_mangle]
 pub extern "C" fn print_all_state () {
     DEFAULT_STATE.lock().unwrap().print();
 
-    let mut _states = STATES.lock().unwrap();
+    let _states = STATES.lock().unwrap();
 
     for state in _states.values() {
         state.print();
