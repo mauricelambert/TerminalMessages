@@ -98,7 +98,7 @@ impl _State for RGBState {
         let (red, green, blue) = self.color;
 
         format!(
-            "\x1b[38;{red};{green};{blue}m[{string}] {text}\x1b[0m",
+            "\x1b[38;2;{red};{green};{blue}m[{string}] {text}",
             red=red,
             green=green,
             blue=blue,
@@ -123,7 +123,7 @@ pub struct State {
 impl _State for State {
     fn as_string(&self, text: String) -> String {
         format!(
-            "\x1b[3{color}m[{character}] {text}\x1b[0m",
+            "\x1b[3{color}m[{character}] {text}",
             color=self.color.value(),
             character=self.character,
             text=text,
@@ -325,7 +325,7 @@ pub fn add_rgb_state (key: &'static str, string: &str, red: u8, green: u8, blue:
 pub fn messagef (text: &str, state: Option<&str>, pourcent: Option<u8>, start: Option<&str>, end: Option<&str>, progressbar: Option<&ProgressBar>, add_progressbar: Option<bool>, oneline_progress: Option<bool>) {
     let to_print: String;
     
-    let mut _states = STATES.lock().unwrap();
+    let _states = STATES.lock().unwrap();
     let default_state = &DEFAULT_STATE.lock().unwrap();
     let state = _states.get(&*state.unwrap_or("OK").to_string()).unwrap_or(default_state);
     let start = start.unwrap_or("");
@@ -369,7 +369,7 @@ pub fn messagef (text: &str, state: Option<&str>, pourcent: Option<u8>, start: O
 pub fn print_all_state () {
     DEFAULT_STATE.lock().unwrap().print();
 
-    let mut _states = STATES.lock().unwrap();
+    let _states = STATES.lock().unwrap();
 
     for state in _states.values() {
         state.print();
