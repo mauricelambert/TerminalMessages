@@ -347,12 +347,14 @@ pub fn messagef (text: &str, state: Option<&str>, pourcent: Option<u8>, start: O
         } else {
             progress_bar = String::from(state.as_string(temp_progressbar));
         }
+    } else {
+        progress_bar = String::from("\x1b[0m")
     }
 
     if oneline_progress {
         to_print = String::from("\x1b[K".to_owned() + start + &state.as_string(text.to_string()) + &progress_bar)
     } else {
-        to_print = String::from("\x1b[K".to_owned() + start + &state.as_string(text.to_string()) + end + &progress_bar)
+        to_print = String::from("\x1b[K".to_owned() + start + &state.as_string(text.to_string()) + "\n" + &progress_bar)
     }
 
     print!("{}", to_print);
@@ -383,6 +385,8 @@ fn main () {
     add_state("Test2", "T", "cyan");
     print_all_state();
 
+    messagef("Test1", Some("Test1"), Some(55), None, Some("\n\n"), None, None, None);
+    messagef("Test2", Some("Test2"), Some(55), None, Some("\n\n"), None, None, None);
     messagef("It's working !", None, None, None, None, None, None, None);
     messagef("Is not working...", Some("NOK"), Some(25), Some(" - "), Some("\n\n"), Some(&ProgressBar{start: String::from("["), end: String::from("]"), character: String::from("#"), empty: String::from("-"), size: 30}), Some(true), Some(true));
 

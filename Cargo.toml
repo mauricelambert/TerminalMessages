@@ -14,7 +14,7 @@ lazy_static = "1.4.0"
 libc = "0.2.80"
 
 [target.x86_64-pc-windows-gnu]
-rustflags = ["-C", "link-arg=-s", "target-feature=+crt-static"]
+rustflags = ["-C", "link-arg=-s"]
 
 [target.x86_64-unknown-linux-gnu]
 rustflags = ["-C", "link-arg=-s"]

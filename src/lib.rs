@@ -314,7 +314,7 @@ fn strlen(string_c: *const u8) -> usize {
 /// ```
 #[no_mangle]
 pub extern "C" fn add_state (key_: *const u8, character_: *const u8, color_: *const u8) {
-    let key = rust_from_c_string(key_);
+    let key: &'static str = rust_from_c_string(key_);
     let color = rust_from_c_string(color_);
     let character = rust_from_c_string(character_);
 
@@ -356,7 +356,7 @@ pub extern "C" fn add_state (key_: *const u8, character_: *const u8, color_: *co
 /// ```
 #[no_mangle]
 pub extern "C" fn add_rgb_state (key_: *const u8, string_: *const u8, red: u8, green: u8, blue: u8) {
-    let key = rust_from_c_string(key_);
+    let key: &'static str = rust_from_c_string(key_);
     let string = rust_from_c_string(string_);
 
     let mut _states = STATES.lock().unwrap();
@@ -474,6 +474,7 @@ pub fn _messagef (text: &str, state: Option<&str>, pourcent: Option<u8>, start: 
     
     let _states = STATES.lock().unwrap();
     let default_state = &DEFAULT_STATE.lock().unwrap();
+    println!("{:?}", state);
     let state = _states.get(&*state.unwrap_or("OK").to_string()).unwrap_or(default_state);
     let start = start.unwrap_or("");
     let end = end.unwrap_or("\n");
@@ -494,6 +495,8 @@ pub fn _messagef (text: &str, state: Option<&str>, pourcent: Option<u8>, start: 
         } else {
             progress_bar = String::from(state.as_string(temp_progressbar));
         }
+    } else {
+        progress_bar = String::from("\x1b[0m")
     }
 
     if oneline_progress {
@@ -519,7 +522,9 @@ pub extern "C" fn print_all_state () {
 
     let _states = STATES.lock().unwrap();
 
-    for state in _states.values() {
+    // for state in _states.values() {
+    for (key, state) in _states.iter() {
+        println!("{:?}", key);
         state.print();
     }
 }
