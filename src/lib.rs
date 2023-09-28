@@ -474,7 +474,6 @@ pub fn _messagef (text: &str, state: Option<&str>, pourcent: Option<u8>, start: 
     
     let _states = STATES.lock().unwrap();
     let default_state = &DEFAULT_STATE.lock().unwrap();
-    println!("{:?}", state);
     let state = _states.get(&*state.unwrap_or("OK").to_string()).unwrap_or(default_state);
     let start = start.unwrap_or("");
     let end = end.unwrap_or("\n");
@@ -522,9 +521,7 @@ pub extern "C" fn print_all_state () {
 
     let _states = STATES.lock().unwrap();
 
-    // for state in _states.values() {
-    for (key, state) in _states.iter() {
-        println!("{:?}", key);
+    for state in _states.values() {
         state.print();
     }
 }
