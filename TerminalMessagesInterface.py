@@ -215,6 +215,7 @@ def main() -> int:
 
     add_state("TEST", "T", "cyan")
     add_rgb_state("TEST2", "2", 188, 76, 53)
+    print_all_state()
     messagef("This is working !")
     messagef(
         "This is not working !",
@@ -230,6 +231,7 @@ def main() -> int:
     messagef("Info", "INFO", 30, "", "\n\n", None, True)
     messagef("To do", "TODO", 40, "", "\n\n", None, True)
     messagef("Question ?", "ASK", 50, "", "\n\n", None, True)
+    print_all_state()
     messagef("Test my simple state", "TEST", 60, "", "\n\n", None, True)
     messagef("Test my advanced state", "TEST2", 70, "", "\n\n", None, True)
     messagef("Ok", "OK", 80, None, None, None, True)

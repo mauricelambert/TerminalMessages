@@ -92,7 +92,7 @@ impl ProgressBar {
 /// type with signatures of specific functions
 pub trait _State {
     fn as_string(&self, text: String) -> String;
-    fn print(&self);
+    fn print(&self, name: &'static str);
 }
 
 /// Status type to add your custom colors
@@ -117,8 +117,8 @@ impl _State for RGBState {
         )
     }
 
-    fn print(&self) {
-        println!("{}", self.as_string(self.name.clone()));
+    fn print(&self, name: &'static str) {
+        println!("{}", self.as_string(format!("Name: {}, Key: {:?}", self.name.clone(), name)));
     }
 }
 
@@ -140,8 +140,8 @@ impl _State for State {
         )
     }
 
-    fn print(&self) {
-        println!("{}", self.as_string(self.name.clone()));
+    fn print(&self, name: &'static str) {
+        println!("{}", self.as_string(format!("Name: {}, Key: {:?}", self.name.clone(), name)));
     }
 }
 
@@ -517,11 +517,11 @@ pub fn _messagef (text: &str, state: Option<&str>, pourcent: Option<u8>, start: 
 /// ```
 #[no_mangle]
 pub extern "C" fn print_all_state () {
-    DEFAULT_STATE.lock().unwrap().print();
+    DEFAULT_STATE.lock().unwrap().print("not found");
 
     let _states = STATES.lock().unwrap();
 
-    for state in _states.values() {
-        state.print();
+    for (key, state) in _states.iter() {
+        state.print(key);
     }
 }
