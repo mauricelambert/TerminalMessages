@@ -269,7 +269,9 @@ lazy_static! {
 fn rust_from_c_string (string_c: *const u8) -> &'static str {
     let length = strlen(string_c);
     let slice = unsafe { std::slice::from_raw_parts(string_c, length) };
-    std::str::from_utf8(slice).unwrap()
+    let str_r = std::str::from_utf8(slice).unwrap();
+    let string_r = str_r.to_owned();
+    String::leak(string_r)
 }
 
 /// This function return the C string length.
