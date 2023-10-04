@@ -1,4 +1,4 @@
-// This file is a demonstration to use TerminalMessages Shared Object on Linux.
+// This file is a demonstration to use TerminalMessages DLL on Windows.
 
 /*
     Copyright (C) 2023  Maurice Lambert
@@ -15,7 +15,7 @@
 */
 
 #include <stdio.h>
-#include <dlfcn.h>
+#include <windows.h>
 
 struct ProgressBar {
     char* start;
@@ -26,41 +26,40 @@ struct ProgressBar {
 };
 
 int main() {
-    void *library;
+    HMODULE library;
     void *(*messagef)(char*, char*, unsigned char, char*, char*, struct ProgressBar*, unsigned char, unsigned char);
     void *(*print_all_state)(void);
     void *(*add_state)(char*, char*, char*);
     void *(*add_rgb_state)(char*, char*, unsigned char, unsigned char, unsigned char);
-    char *error;
 
-    library = dlopen("./libTerminalMessages.so", RTLD_LAZY);
+    library = LoadLibrary("./TerminalMessages.dll");
     if (!library) {
-        fprintf(stderr, "%s\n", dlerror());
+        printf("Error loading library\n");
         return 1;
     }
 
-    messagef = dlsym(library, "messagef");
-    if ((error = dlerror()) != NULL) {
-        fprintf(stderr, "%s\n", error);
-        return 2;
+    messagef = (void *(*)(char*, char*, unsigned char, char*, char*, struct ProgressBar*, unsigned char, unsigned char))GetProcAddress(library, "messagef");
+    if (!messagef) {
+        printf("Error getting function\n");
+        return 1;
     }
 
-    print_all_state = dlsym(library, "print_all_state");
-    if ((error = dlerror()) != NULL) {
-        fprintf(stderr, "%s\n", error);
-        return 2;
+    print_all_state = (void *(*)(void))GetProcAddress(library, "print_all_state");
+    if (!messagef) {
+        printf("Error getting function\n");
+        return 1;
     }
 
-    add_state = dlsym(library, "add_state");
-    if ((error = dlerror()) != NULL) {
-        fprintf(stderr, "%s\n", error);
-        return 2;
+    add_state = (void *(*)(char*, char*, char*))GetProcAddress(library, "add_state");
+    if (!messagef) {
+        printf("Error getting function\n");
+        return 1;
     }
 
-    add_rgb_state = dlsym(library, "add_rgb_state");
-    if ((error = dlerror()) != NULL) {
-        fprintf(stderr, "%s\n", error);
-        return 2;
+    add_rgb_state = (void *(*)(char*, char*, unsigned char, unsigned char, unsigned char))GetProcAddress(library, "add_rgb_state");
+    if (!messagef) {
+        printf("Error getting function\n");
+        return 1;
     }
 
     struct ProgressBar progressbar = {"[", "]", "#", "-", 30};
@@ -72,6 +71,6 @@ int main() {
     messagef("Test", "TEST", 25, NULL, NULL, NULL, 1, 0);
     messagef("Test", "TEST2", 75, " - ", "\n\n", &progressbar, 1, 1);
 
-    dlclose(messagef);
+    FreeLibrary(library);
     return 0;
 }
