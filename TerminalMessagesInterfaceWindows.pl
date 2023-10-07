@@ -1,0 +1,61 @@
+use Cwd qw(abs_path);
+use File::Spec;
+use Win32::API;
+use Win32::API::Struct;
+
+Win32::API::Struct->typedef('ProgressBar', qw(
+    char* start;
+    char* end;
+    char* character;
+    char* empty;
+    short size;
+));
+
+my $default_progress = Win32::API::Struct->new('ProgressBar'); 
+$default_progress->{start} = "|";
+$default_progress->{end} = "|";
+$default_progress->{character} = "█";
+$default_progress->{empty} = " ";
+$default_progress->{size} = 20;
+
+Win32::API->Import(abs_path(File::Spec->canonpath('TerminalMessages.dll')), 'void *messagef(
+    char* message,
+    char* state_name,
+    unsigned char pourcent,
+    char* start,
+    char* end,
+    ProgressBar* progressbar,
+    unsigned char add_progressbar,
+    unsigned char oneline_progress
+);');
+
+Win32::API->Import(abs_path(File::Spec->canonpath('TerminalMessages.dll')), 'void *print_all_state();');
+Win32::API->Import(abs_path(File::Spec->canonpath('TerminalMessages.dll')), 'void *add_state(char* state_name, char* character_symbol, char* color);');
+Win32::API->Import(abs_path(File::Spec->canonpath('TerminalMessages.dll')), 'void *add_rgb_state(char* state_name, char* character_symbol, unsigned char red, unsigned char green, unsigned char blue);');
+
+sub perl_messagef {
+    my ($message, $state, $pourcent, $start, $end, %progress_values, $add_progressbar, $oneline_progress) = @_;
+    my $progress;
+    my $size = keys %progress_values;
+    if ($size == 0) {
+        $progress = $default_progress;
+    } else {
+        $progress = Win32::API::Struct->new('ProgressBar');
+        $progress->{start} = $progress_values{start};
+        $progress->{end} = $progress_values{end};
+        $progress->{character} = $progress_values{character};
+        $progress->{empty} = $progress_values{empty};
+        $progress->{size} = $progress_values{size};
+    }
+
+    messagef($message, $state, $pourcent, $start, $end, $progress, $add_progressbar, $oneline_progress);
+}
+
+my %my_progress = (start => "[", end => "]", character => "#", empty => "-", size => 30);
+
+perl_messagef("test");
+add_state("TEST", "T", "cyan");
+add_rgb_state("TEST2", "2", 188, 76, 53);
+print_all_state();
+perl_messagef("test", "TEST", 50, " - ", "\n\n", %my_progress, 1, 1);
+perl_messagef("test", "TEST2", 80, " - ", "\n\n");
