@@ -68,7 +68,7 @@ sub perl_messagef {
         $progress->{size} = $progress_values{size};
     }
 
-    messagef($message, $state, $pourcent, $start, $end, $progress, $add_progressbar, $oneline_progress);
+    messagef($message, $state, $pourcent, $start, $end, $progress, defined $add_progressbar ? $add_progressbar : 1, $oneline_progress);
 }
 
 my %my_progress = (start => "[", end => "]", character => "#", empty => "-", size => 30);
@@ -78,6 +78,6 @@ add_state("TEST", "T", "cyan");
 add_rgb_state("TEST2", "2", 188, 76, 53);
 print_all_state();
 perl_messagef("test", "TEST", 50, " - ", "\n\n", 1, 1, %my_progress);
-perl_messagef("test", "TEST2", 80, " - ", "\n");
+perl_messagef("test", "TEST2", 80, " - ", "\n\n");
 perl_messagef("Press enter...", "TODO", 80, "", " ", 0, 1, %my_progress);
 my $string = <STDIN>;

@@ -59,9 +59,9 @@ sub messagef {
             empty => $progress_values{empty},
             size => $progress_values{size},
         );
-        $messagef_progress->call($message, $state, $pourcent, $start, $end, $progress, $add_progressbar, $oneline_progress);
+        $messagef_progress->call($message, $state, $pourcent, $start, $end, $progress, defined $add_progressbar ? $add_progressbar : 1, $oneline_progress);
     } else {
-        FFI::call($messagef_addr, "cvppCppoCC", $message, $state, $pourcent, $start, $end, $progress, $add_progressbar, $oneline_progress);
+        FFI::call($messagef_addr, "cvppCppoCC", $message, $state, $pourcent, $start, $end, $progress, defined $add_progressbar ? $add_progressbar : 1, $oneline_progress);
     }
 }
 
