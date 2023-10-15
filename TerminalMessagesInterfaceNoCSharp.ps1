@@ -202,7 +202,7 @@ function messagef () {
         [Parameter(Position = 4)] [String] $start = "",
         [Parameter(Position = 5)] [String] $end = "`n",
         [Parameter(Position = 6)] [IntPtr] $progress = [IntPtr]::Zero,
-        [Parameter(Position = 7)] [IntPtr] $add_progressbar = [IntPtr]::Zero,
+        [Parameter(Position = 7)] [IntPtr] $add_progressbar = 1,
         [Parameter(Position = 8)] [IntPtr] $oneline_progress = [IntPtr]::Zero
     )
 
@@ -251,4 +251,7 @@ if ($MyInvocation.CommandOrigin -eq 'Runspace') {
     messagef "test"
     messagef "test" "TEST" 50 " - " "`n`n" $progress 1 1
     messagef "test" "TEST2" 80
+
+    messagef "Press enter..." "TODO" 0 "" "" $progress 0 1
+    Read-Host
 }

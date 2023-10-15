@@ -52,7 +52,7 @@ namespace TerminalMessages
             string start = null,
             string end = null,
             ProgressBar progress = new ProgressBar(),
-            int add_progressbar = 0,
+            int add_progressbar = 1,
             int oneline_progress = 0
         ) {
             if (progress.size == 0)
@@ -96,4 +96,7 @@ if ($MyInvocation.CommandOrigin -eq 'Runspace') {
     [TerminalMessages.TerminalMessagesInterface]::print_all_state()
     [TerminalMessages.TerminalMessagesInterface]::c_messagef("test", "TEST", 50, " - ", "`n`n", $progress, 1, 1)
     [TerminalMessages.TerminalMessagesInterface]::c_messagef("test", "TEST2", 80, " - ", "`n`n")
+
+    [TerminalMessages.TerminalMessagesInterface]::c_messagef("Press enter...", "TODO", 80, "", "", $progress, 0, 1)
+    Read-Host
 }

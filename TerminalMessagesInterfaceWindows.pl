@@ -16,6 +16,7 @@
 #    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ###################
 
+use feature 'say';
 use Cwd qw(abs_path);
 use File::Spec;
 use Win32::API;
@@ -52,7 +53,8 @@ Win32::API->Import(abs_path(File::Spec->canonpath('TerminalMessages.dll')), 'voi
 Win32::API->Import(abs_path(File::Spec->canonpath('TerminalMessages.dll')), 'void *add_rgb_state(char* state_name, char* character_symbol, unsigned char red, unsigned char green, unsigned char blue);');
 
 sub perl_messagef {
-    my ($message, $state, $pourcent, $start, $end, %progress_values, $add_progressbar, $oneline_progress) = @_;
+    my ($message, $state, $pourcent, $start, $end, $add_progressbar, $oneline_progress, %progress_values) = @_;
+
     my $progress;
     my $size = keys %progress_values;
     if ($size == 0) {
@@ -75,5 +77,7 @@ perl_messagef("test");
 add_state("TEST", "T", "cyan");
 add_rgb_state("TEST2", "2", 188, 76, 53);
 print_all_state();
-perl_messagef("test", "TEST", 50, " - ", "\n\n", %my_progress, 1, 1);
-perl_messagef("test", "TEST2", 80, " - ", "\n\n");
+perl_messagef("test", "TEST", 50, " - ", "\n\n", 1, 1, %my_progress);
+perl_messagef("test", "TEST2", 80, " - ", "\n");
+perl_messagef("Press enter...", "TODO", 80, "", " ", 0, 1, %my_progress);
+my $string = <STDIN>;

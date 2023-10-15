@@ -96,7 +96,7 @@ $c_add_rgb_state = Fiddle::Function.new(
     Fiddle::TYPE_VOIDP
 )
 
-def messagef(message, state = 0, pourcent = 0, start = 0, end_ = 0, progressbar = 0, add_progressbar = 0, oneline_progress = 0)
+def messagef(message, state = 0, pourcent = 0, start = 0, end_ = 0, progressbar = 0, add_progressbar = 1, oneline_progress = 0)
     if progressbar != 0
         c_progressbar = ProgressBarC.malloc()
         c_progressbar.message = Fiddle::Pointer[progressbar.message]
@@ -151,4 +151,7 @@ if __FILE__ == $0
     print_all_state()
     messagef("Test", "TEST", 50)
     messagef("Test", "TEST2", 80)
+
+    messagef("Press enter...", "TODO", 0, "", "", ProgressBar.new("[", "]", "#", "-", 30), 0, 1)
+    gets.chomp
 end

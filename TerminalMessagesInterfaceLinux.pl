@@ -47,7 +47,7 @@ my $print_all_state_addr = DynaLoader::dl_find_symbol($terminalmessages, 'print_
 DynaLoader::dl_install_xsub('print_all_state', $print_all_state_addr);
 
 sub messagef {
-    my ($message, $state, $pourcent, $start, $end, %progress_values, $add_progressbar, $oneline_progress) = @_;
+    my ($message, $state, $pourcent, $start, $end, $add_progressbar, $oneline_progress, %progress_values) = @_;
 
     my $progress;
     my $size = keys %progress_values;
@@ -81,5 +81,8 @@ messagef("test");
 add_state("TEST", "T", "cyan");
 add_rgb_state("TEST2", "2", 188, 76, 53);
 print_all_state();
-messagef("test", "TEST", 50, " - ", "\n\n", %my_progress, 1, 1);
+messagef("test", "TEST", 50, " - ", "\n\n", 1, 1, %my_progress);
 messagef("test", "TEST2", 80, " - ", "\n\n");
+
+messagef("Press enter...", "TODO", 0, "", "", 0, 1, %my_progress);
+my $string = <STDIN>;

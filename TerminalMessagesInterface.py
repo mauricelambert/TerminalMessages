@@ -163,7 +163,7 @@ def messagef(
     start: str = None,
     end: str = None,
     progressbar: ProgressBar = None,
-    add_progressbar: bool = None,
+    add_progressbar: bool = True,
     oneline_progress: bool = None,
 ) -> None:
     """
@@ -236,6 +236,9 @@ def main() -> int:
     messagef("Test my advanced state", "TEST2", 70, "", "\n\n", None, True)
     messagef("Ok", "OK", 80, None, None, None, True)
     messagef("Ok", "OK", 90, None, None, None, True)
+
+    messagef("Press enter...", "TODO", 90, None, None, None, False, True)
+    input("")
 
 
 if __name__ == "__main__":

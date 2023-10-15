@@ -421,7 +421,7 @@ pub extern "C" fn messagef (text_: *const u8, state_: *const u8, pourcent_: u8, 
     }
 
     if add_progressbar_ == 0 {
-        add_progressbar = None;
+        add_progressbar = Some(false);
     } else {
         add_progressbar = Some(true);
     }
